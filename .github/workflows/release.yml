@@ -1,0 +1,67 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+env:
+  EXT_NAME: wxl-quest-marker
+  CORE_REPO: WarcraftXL/wxl-core
+  CORE_REF: v1.1
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout this extension
+        uses: actions/checkout@v4
+        with:
+          path: ext
+
+      - name: Checkout wxl-core
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.CORE_REPO }}
+          ref: ${{ env.CORE_REF }}
+          submodules: recursive
+          path: core
+
+      - name: Add the extension to the core build
+        shell: pwsh
+        run: |
+          $dest = "core/extensions/$env:EXT_NAME"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+          Copy-Item -Path "ext/src","ext/$env:EXT_NAME.cfg" -Destination $dest -Recurse -Force
+
+      - name: Configure
+        shell: pwsh
+        run: cmake -S core -B core/build -A Win32
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build core/build --config Release --target $env:EXT_NAME --parallel
+
+      - name: Read version and stage Hub package
+        id: version
+        shell: pwsh
+        run: |
+          $version = (Get-Content ext/wxl.json -Raw | ConvertFrom-Json).extension.version
+          if (-not $version) { throw "wxl.json carries no extension.version" }
+          $package = "dist/package"
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+          Copy-Item "core/build/Release/$env:EXT_NAME.dll" "$package/$env:EXT_NAME.dll"
+          Copy-Item "ext/$env:EXT_NAME.cfg" "$package/$env:EXT_NAME.cfg"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path "$package/*" -DestinationPath "dist/$env:EXT_NAME-v$version.zip" -Force
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ${{ env.EXT_NAME }} ${{ steps.version.outputs.version }}
+          body: WarcraftXL Hub package built from ${{ github.sha }}.
+          files: dist/${{ env.EXT_NAME }}-v${{ steps.version.outputs.version }}.zip
