@@ -1,0 +1,10 @@
+## Interface: 30300
+## Title: WarcraftXL UI Tracker
+## Notes: WXL-UI-Tracker v2 port with ACore transport and Eunoia QuestMap integration.
+## Author: bozo-1, WarcraftXL, Eunoia
+## Version: 2.1.1-acore-eunoia
+## DefaultState: enabled
+## LoadOnDemand: 0
+## SavedVariables: QuestMarkerDB
+
+QuestMarker.lua

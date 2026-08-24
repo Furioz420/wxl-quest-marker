@@ -1,0 +1,25 @@
+# Build products
+*.d
+*.o
+*.obj
+*.pdb
+*.ilk
+*.lib
+*.dll
+*.exe
+*.zip
+build/
+Build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+*.swp
+.cache/
+Testing/

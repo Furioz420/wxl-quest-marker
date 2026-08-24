@@ -1,0 +1,43 @@
+{
+  "manifest": 1,
+  "extension": {
+    "id": "wxl-quest-marker",
+    "version": "1.1.0",
+    "abi": "1.1",
+    "entry": "wxl-quest-marker.dll",
+    "assets": ["wxl-quest-marker.cfg"],
+    "requires": {
+      "wxl-runtime": ">=1.1.0"
+    },
+    "conflicts": [],
+    "hooks": []
+  },
+  "prerequisites": [
+    {
+      "kind": "server",
+      "title": "Compatible quest marker server implementation",
+      "detail": "Review the AzerothCore reference and integrate the matching opcode contract. The Hub does not modify a server.",
+      "url": "https://github.com/Furioz420/wxl-quest-marker/tree/main/server/azerothcore"
+    },
+    {
+      "kind": "client-data",
+      "title": "Quest Marker addon and texture payload",
+      "detail": "Install the reviewed client files through the client-data pipeline. They are not included in the Hub DLL package.",
+      "url": "https://github.com/Furioz420/wxl-quest-marker/tree/main/client"
+    }
+  ],
+  "deploy": {
+    "mode": "release",
+    "match": "wxl-quest-marker-v*.zip"
+  },
+  "listing": {
+    "title": "Quest Marker",
+    "tagline": "Server-authoritative world-space quest objectives, turn-ins, target circles, and corpse navigation.",
+    "description": "store/description.md",
+    "gallery": [],
+    "categories": ["gameplay", "quests", "interface"],
+    "accent": "#d8b84a"
+  },
+  "license": "GPL-3.0-or-later",
+  "signature": null
+}

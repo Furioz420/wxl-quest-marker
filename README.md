@@ -1,54 +1,45 @@
-# WarcraftXL quest marker
+# wxl-quest-marker
 
-This module renders a world-space marker for the selected quest and synchronizes
-marker positions from AzerothCore through WXL's raw opcode registry.
+WarcraftXL ABI 1.1 port of the world-space quest navigation work from `bozo-1/WXL-UI-Tracker` for an
+AzerothCore-backed client.
 
-## Client
+The client renders selected-quest objectives, turn-ins, objective target circles, and corpse
+navigation. The server owns eligibility, coordinates, creature resolution, and corpse state.
 
-The files under `src/` are discovered automatically by the root WXL CMake
-configuration. No module-specific CMake hook is required.
+## Protocol
 
-The module registers `Quest Marker` under the dedicated Interface Options -> WXL
-tab. Marker enablement and opacity are stored as client CVars. Future client
-features such as Ping can register their own panel in the same WXL tab.
+- `0x051F`: client request (`101` exact quest, `102` snapshot, `103` objective entries);
+- `0x0520`: objective or turn-in marker;
+- `0x0536`: selected-quest creature entries;
+- `0x0537`: corpse position.
 
-The preferred texture path is:
+The current AzerothCore reference is in `server/azerothcore/wxl_quest_marker.cpp`. It matches the
+native v1.1 opcode contract; it is reference integration code and is never installed by the Hub.
 
-```
-textures\questmarker\diamond.blp
-```
+## Client data
 
-If that file is not present in the client MPQs, WXL creates the same diamond as
-a procedural D3D9 texture. The module therefore works without a Patch-Z asset.
+The recreated addon is under `client/Interface/AddOns/QuestMarker`. It selects a quest and presents
+tracker state while the server remains authoritative. Client-data files must be reviewed and
+deployed through the project's client-data pipeline.
 
-## AzerothCore
+The Hub release contains only:
 
-The portable server script lives at:
+- `wxl-quest-marker.dll`;
+- `wxl-quest-marker.cfg`.
 
-```
-server/azerothcore/wxl_quest_marker.cpp
-```
+## Requirements
 
-Copy it into `src/server/scripts/Custom/`, declare and call
-`AddSC_wxl_quest_marker()` from `custom_script_loader.cpp`, and install the reusable
-registry/integration files under `scripts/wxl-opcodes/server/azerothcore`.
+- WarcraftXL Core ABI 1.1 with FrameScript and network services;
+- `wxl-runtime` 1.1.0 or newer;
+- the matching server and client-data prerequisites above.
 
-The client requests a snapshot with CMSG `0x051F`; the server answers with SMSG
-`0x0102`. Quest coordinates come from AzerothCore's in-memory `quest_poi` and
-`quest_poi_points` data. Incomplete quests prefer objective POIs; completed
-quests prefer the `ObjectiveIndex = -1` return POI. Only POIs on the player's
-current map are sent.
+Set `WXL_QUEST_MARKER=0` in `wxl-quest-marker.cfg` to disable the native extension.
 
-No SQL changes are required when the world database already contains quest POI
-data and `QuestPOI.Enabled = 1`.
+## Attribution
 
-## Smoke test
+The quest-navigation concept and original implementation are credited to `bozo-1/WXL-UI-Tracker`.
+The code in this repository is the WarcraftXL/AzerothCore port and retains that provenance.
 
-1. Log in with at least one incomplete quest for the current map.
-2. Select different quests in the quest log or tracker and confirm the marker
-   switches without `/reload`.
-3. Complete or abandon a quest and confirm its old marker disappears.
-4. Change maps and confirm markers from the previous map are cleared.
-5. Use `/qma 0` through `/qma 255` to test marker opacity.
-6. Open Interface Options -> WXL -> Quest Marker and verify
-   enable/disable, opacity, and Defaults.
+## License
+
+GPL-3.0-or-later. See `LICENSE`.
