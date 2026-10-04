@@ -2,6 +2,7 @@
 #include "QuestHighlight.hpp"
 #include "ExtensionApi.hpp"
 #include "TextureLoader.hpp"
+#include "SavedMarkerStates.hpp"
 
 #include "game/Gx.hpp"
 #include "game/Camera.hpp"
@@ -253,141 +254,7 @@ namespace wxl_quest_marker
         };
 
 
-        class SavedMarkerStates
-        {
-        public:
-            DWORD zEnable = TRUE, zWrite = FALSE, alphaBlend = FALSE;
-            DWORD srcBlend = 0, dstBlend = 0, alphaTest = FALSE;
-            DWORD cull = D3DCULL_CCW, lighting = TRUE;
-            DWORD colorWrite = 0x0F, fog = FALSE, stencil = FALSE;
-            IDirect3DVertexShader9* vs = nullptr;
-            IDirect3DPixelShader9* ps = nullptr;
-            IDirect3DDevice9* dev = nullptr;
-            bool captured = false;
-            // Transforms
-            D3DMATRIX matWorld, matView, matProj;
-            // Texture stage states for all 8 stages
-            DWORD tssColorOp[8], tssColorArg1[8], tssColorArg2[8];
-            DWORD tssAlphaOp[8], tssAlphaArg1[8], tssAlphaArg2[8];
-            // Sampler states for stage 0
-            DWORD sampMipFilter, sampMinFilter, sampMagFilter;
-            // ZFUNC, texture 0
-            DWORD zFunc;
-            IDirect3DBaseTexture9* tex0 = nullptr;
-            // Stream source, FVF, alpha func/ref
-            IDirect3DVertexBuffer9* streamVB = nullptr;
-            UINT streamOffset = 0;
-            UINT streamStride = 0;
-            DWORD fvf = 0;
-            DWORD alphaFunc = 0;
-            DWORD alphaRef = 0;
-            DWORD blendOp = 0;
-            DWORD srgbWrite = 0;
 
-            void Capture(IDirect3DDevice9* d)
-            {
-                dev = d;
-                d->GetRenderState(D3DRS_ZENABLE, &zEnable);
-                d->GetRenderState(D3DRS_ZWRITEENABLE, &zWrite);
-                d->GetRenderState(D3DRS_ALPHABLENDENABLE, &alphaBlend);
-                d->GetRenderState(D3DRS_SRCBLEND, &srcBlend);
-                d->GetRenderState(D3DRS_DESTBLEND, &dstBlend);
-                d->GetRenderState(D3DRS_ALPHATESTENABLE, &alphaTest);
-                d->GetRenderState(D3DRS_CULLMODE, &cull);
-                d->GetRenderState(D3DRS_LIGHTING, &lighting);
-                d->GetRenderState(D3DRS_COLORWRITEENABLE, &colorWrite);
-                d->GetRenderState(D3DRS_FOGENABLE, &fog);
-                d->GetRenderState(D3DRS_STENCILENABLE, &stencil);
-                // D3D9 Get* interface methods already return an AddRef'd pointer. Adding another
-                // reference here leaked the currently bound shaders once per rendered marker frame.
-                // More importantly, doing the same for a bound DEFAULT-pool texture below kept that
-                // resource alive after OnDeviceLost, so Reset could never leave
-                // D3DERR_DEVICENOTRESET after minimizing/restoring the client.
-                d->GetVertexShader(&vs);
-                d->GetPixelShader(&ps);
-                // Transforms
-                d->GetTransform(D3DTS_WORLD, &matWorld);
-                d->GetTransform(D3DTS_VIEW, &matView);
-                d->GetTransform(D3DTS_PROJECTION, &matProj);
-                // Texture stage states for all 8 stages
-                for (DWORD s = 0; s < 8; ++s) {
-                    d->GetTextureStageState(s, D3DTSS_COLOROP,   &tssColorOp[s]);
-                    d->GetTextureStageState(s, D3DTSS_COLORARG1, &tssColorArg1[s]);
-                    d->GetTextureStageState(s, D3DTSS_COLORARG2, &tssColorArg2[s]);
-                    d->GetTextureStageState(s, D3DTSS_ALPHAOP,   &tssAlphaOp[s]);
-                    d->GetTextureStageState(s, D3DTSS_ALPHAARG1, &tssAlphaArg1[s]);
-                    d->GetTextureStageState(s, D3DTSS_ALPHAARG2, &tssAlphaArg2[s]);
-                }
-                // Sampler states for stage 0
-                d->GetSamplerState(0, D3DSAMP_MIPFILTER, &sampMipFilter);
-                d->GetSamplerState(0, D3DSAMP_MINFILTER, &sampMinFilter);
-                d->GetSamplerState(0, D3DSAMP_MAGFILTER, &sampMagFilter);
-                // ZFUNC, texture 0
-                d->GetRenderState(D3DRS_ZFUNC, &zFunc);
-                d->GetTexture(0, &tex0);
-                // Stream source, FVF, alpha func/ref
-                d->GetStreamSource(0, &streamVB, &streamOffset, &streamStride);
-                d->GetFVF(&fvf);
-                d->GetRenderState(D3DRS_ALPHAFUNC, &alphaFunc);
-                d->GetRenderState(D3DRS_ALPHAREF, &alphaRef);
-                d->GetRenderState(D3DRS_BLENDOP, &blendOp);
-                { union { DWORD d; float f; } u; d->GetRenderState(D3DRS_SRGBWRITEENABLE, &u.d); srgbWrite = u.d; }
-                captured = true;
-            }
-
-            void Restore()
-            {
-                if (!dev || !captured) return;
-                captured = false;
-                dev->SetRenderState(D3DRS_ZENABLE, zEnable);
-                dev->SetRenderState(D3DRS_ZWRITEENABLE, zWrite);
-                dev->SetRenderState(D3DRS_ALPHABLENDENABLE, alphaBlend);
-                dev->SetRenderState(D3DRS_SRCBLEND, srcBlend);
-                dev->SetRenderState(D3DRS_DESTBLEND, dstBlend);
-                dev->SetRenderState(D3DRS_ALPHATESTENABLE, alphaTest);
-                dev->SetRenderState(D3DRS_CULLMODE, cull);
-                dev->SetRenderState(D3DRS_LIGHTING, lighting);
-                dev->SetRenderState(D3DRS_COLORWRITEENABLE, colorWrite);
-                dev->SetRenderState(D3DRS_FOGENABLE, fog);
-                dev->SetRenderState(D3DRS_STENCILENABLE, stencil);
-                dev->SetVertexShader(vs);
-                dev->SetPixelShader(ps);
-                if (vs) vs->Release();
-                if (ps) ps->Release();
-                vs = nullptr; ps = nullptr;
-                // Transforms
-                dev->SetTransform(D3DTS_WORLD, &matWorld);
-                dev->SetTransform(D3DTS_VIEW, &matView);
-                dev->SetTransform(D3DTS_PROJECTION, &matProj);
-                // Texture stage states
-                for (DWORD s = 0; s < 8; ++s) {
-                    dev->SetTextureStageState(s, D3DTSS_COLOROP,   tssColorOp[s]);
-                    dev->SetTextureStageState(s, D3DTSS_COLORARG1, tssColorArg1[s]);
-                    dev->SetTextureStageState(s, D3DTSS_COLORARG2, tssColorArg2[s]);
-                    dev->SetTextureStageState(s, D3DTSS_ALPHAOP,   tssAlphaOp[s]);
-                    dev->SetTextureStageState(s, D3DTSS_ALPHAARG1, tssAlphaArg1[s]);
-                    dev->SetTextureStageState(s, D3DTSS_ALPHAARG2, tssAlphaArg2[s]);
-                }
-                // Sampler states
-                dev->SetSamplerState(0, D3DSAMP_MIPFILTER, sampMipFilter);
-                dev->SetSamplerState(0, D3DSAMP_MINFILTER, sampMinFilter);
-                dev->SetSamplerState(0, D3DSAMP_MAGFILTER, sampMagFilter);
-                // ZFUNC, texture 0
-                dev->SetRenderState(D3DRS_ZFUNC, zFunc);
-                dev->SetTexture(0, tex0);
-                if (tex0) { tex0->Release(); tex0 = nullptr; }
-                // Stream source, FVF, alpha func/ref
-                dev->SetStreamSource(0, streamVB, streamOffset, streamStride);
-                if (streamVB) streamVB->Release();
-                dev->SetFVF(fvf);
-                dev->SetRenderState(D3DRS_ALPHAFUNC, alphaFunc);
-                dev->SetRenderState(D3DRS_ALPHAREF, alphaRef);
-                dev->SetRenderState(D3DRS_BLENDOP, blendOp);
-                dev->SetRenderState(D3DRS_SRGBWRITEENABLE, srgbWrite);
-            }
-
-            ~SavedMarkerStates() { Restore(); }
-        };
 
     }
 
@@ -1562,10 +1429,16 @@ local sendRetry = CreateFrame("Frame")
 
     void QuestMarker::InitDevice(void* device)
     {
-        if (m_deviceReady) return;
-
         auto* d = static_cast<IDirect3DDevice9*>(device);
-        if (!d) { m_deviceReady = true; return; }
+        if (!d) return;
+        if (m_resourceDevice != device)
+        {
+            ReleaseDevice();
+            d->AddRef();
+            m_resourceDevice = device;
+            WLOG_INFO("quest-marker: rebuilding resources for device=%p", device);
+        }
+        if (m_deviceReady) return;
 
         m_d3dTexture = LoadBlpTexture(d, "interface\\navigation\\ingamenavigationui.blp");
         if (!m_d3dTexture)
@@ -1586,6 +1459,10 @@ local sendRetry = CreateFrame("Frame")
             m_vbSize = 0;
         }
         m_deviceReady = false;
+        if (m_resourceDevice) {
+            static_cast<IDirect3DDevice9*>(m_resourceDevice)->Release();
+            m_resourceDevice = nullptr;
+        }
     }
 
     void QuestMarker::OnWorldRenderEnd(const wxl::events::WorldRenderEndArgs& a)
@@ -1628,7 +1505,7 @@ local sendRetry = CreateFrame("Frame")
         gx::Device9 dev(a.device);
         if (!dev) { m_markerValid = false; return; }
 
-        if (!m_deviceReady || !m_d3dTexture) InitDevice(a.device);
+        InitDevice(a.device);
         if (!m_deviceReady || !m_d3dTexture)
         {
             m_markerValid = false;
@@ -2138,19 +2015,7 @@ do
     _WXL_QUEST_TRACKER_POP_MARKER = nil
     _WXL_QUEST_TRACKER_POP_KILL = nil
     _WXL_QUEST_TRACKER_POP_CORPSE = nil
-
-    local loader = CreateFrame("Frame")
-    loader:RegisterEvent("PLAYER_LOGIN")
-    loader:RegisterEvent("PLAYER_ENTERING_WORLD")
-    loader:SetScript("OnEvent", function(self)
-        if EnableAddOn then EnableAddOn("QuestMarker") end
-        if (not IsAddOnLoaded or not IsAddOnLoaded("QuestMarker")) and LoadAddOn then
-            LoadAddOn("QuestMarker")
-        end
-        if IsAddOnLoaded and IsAddOnLoaded("QuestMarker") then
-            self:UnregisterAllEvents()
-        end
-    end)
+    if tracker._FrameXMLReady then tracker._FrameXMLReady() end
 end
 )lua";
         ok &= FrameScript()->RegisterScript("quest-tracker-bridge", bootstrap) != 0;
