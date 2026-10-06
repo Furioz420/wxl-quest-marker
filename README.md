@@ -1,5 +1,7 @@
 # wxl-quest-marker
 
+[Build compatibility and release gate](BUILDING.md)
+
 WarcraftXL ABI 1.1 port of the world-space quest navigation work from [bozo-1/WXL-UI-Tracker](https://github.com/bozo-1/WXL-UI-Tracker) for an
 AzerothCore-backed client.
 
@@ -48,4 +50,4 @@ GPL-3.0-or-later. See `LICENSE`.
 
 Build the Win32 DLL against the matching core and Runtime 1.1 APIs. The repository release workflow packages the DLL and config only; the server reference and client interface/texture payload must be reviewed and deployed separately. The integrated Eunoia client now uses a built-in `FrameXML/FrameNew/WarcraftXL/QuestMarker/QuestMarker.lua` path. This standalone repository still contains the earlier addon loader and addon payload. Do not deploy both UI implementations together; reconcile the native bootstrap, FrameNew payload, and client manifest before declaring this repository release-ready.
 
-With the matching server installed, test selected-objective, turn-in, target-circle, and corpse markers; compare server coordinates and client world placement, then inspect both logs. Keep prior DLL/config, server integration, and client assets for rollback. `main` currently auto-publishes against moving upstream `v1.1`, so pin and test that core first.
+With the matching server installed, test selected-objective, turn-in, target-circle, and corpse markers; compare server coordinates and client world placement, then inspect both logs. Keep prior DLL/config, server integration, and client assets for rollback. The build pins the core revision in [BUILDING.md](BUILDING.md); publish a release tag only after the client/server route passes.

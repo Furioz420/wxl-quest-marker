@@ -12,12 +12,11 @@ as standalone builds. No game client, database dump, or server credentials are i
 
 ## Build and installation requirements
 
-Build this extension inside a compatible WXL core with the matching extension APIs.
-The integration workspace can contain API changes that are not yet in the public
-core repository. Existing workflows that select a moving core branch are not proof
-of compatibility. Standalone CI and release packaging remain a separate gate:
-confirm the required core APIs, pin a compatible public core revision, build, and
-validate the matching client installation before publishing a binary release.
+The source build now pins Furioz420/wxl-core commit
+`48b2849ed05d2c66e2ba2a6185e09fafd111da53`, which includes the extension
+SDK and per-module include path. A clean MSVC Win32 build produced this module's
+DLL against that core revision. GitHub CI and matching-client smoke tests remain
+release gates; a successful source build is not an installable-client acceptance.
 
 This PR does not deploy anything to the game client. Accepted in-game behavior is
 evidence for the integrated workspace, not for a separately built DLL from this repo.

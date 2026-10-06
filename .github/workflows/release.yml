@@ -1,16 +1,19 @@
 name: Build and Release
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
+    tags: ['v*']
 
 permissions:
   contents: write
 
 env:
   EXT_NAME: wxl-quest-marker
-  CORE_REPO: WarcraftXL/wxl-core
-  CORE_REF: v1.1
+  CORE_REPO: Furioz420/wxl-core
+  CORE_REF: 48b2849ed05d2c66e2ba2a6185e09fafd111da53
 
 jobs:
   build:
@@ -58,7 +61,17 @@ jobs:
           Compress-Archive -Path "$package/*" -DestinationPath "dist/$env:EXT_NAME-v$version.zip" -Force
           "version=$version" >> $env:GITHUB_OUTPUT
 
+      - name: Verify release tag matches manifest
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $expected = "v${{ steps.version.outputs.version }}"
+          if ($env:GITHUB_REF_NAME -ne $expected) {
+            throw "Tag $env:GITHUB_REF_NAME does not match manifest $expected"
+          }
+
       - name: Publish Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
