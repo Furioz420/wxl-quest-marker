@@ -72,6 +72,7 @@ namespace wxl_quest_marker
         float    m_trackerNdcX = 0, m_trackerNdcY = 0;
         float    m_trackerNdcHalfW = 0, m_trackerNdcHalfH = 0;
         bool     m_deviceReady = false;
+        void*    m_resourceDevice = nullptr; // retained until this device's resources are retired
         void*    m_d3dTexture = nullptr;
         void*    m_vb = nullptr;
         int      m_vbSize = 0;
